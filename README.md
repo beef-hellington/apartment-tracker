@@ -7,8 +7,8 @@ A browser-based apartment comparison tool. Add listings manually or paste raw te
 - Add listings via a manual form or by pasting Zillow / Apartments.com text
 - Dashboard showing all saved listings as cards
 - Compare view — select 2–3 listings side by side
-- Rankings — listings scored by rent (40%), amenities (30%), and gut feeling (30%)
-- Settings — customize your budget range and amenities list
+- Rankings — listings scored by rent, amenities, and gut feeling with configurable weights
+- Settings — customize your budget range, amenities list, and scoring weights
 - Data persists across page refreshes via localStorage
 
 ---
@@ -258,11 +258,14 @@ The Rankings tab scores every saved listing:
 
 | Factor | Weight | How it's scored |
 |---|---|---|
-| Rent | 40% | At or below your budget min = 10/10, at or above max = 0/10 |
-| Amenities | 30% | How many amenities are checked out of the total |
-| Gut feeling | 30% | Your 1–10 slider score |
+| Rent | 40% (default) | At or below your budget min = 10/10, at or above max = 0/10 |
+| Amenities | 30% (default) | How many amenities are checked out of the total |
+| Gut feeling | 30% (default) | Your 1–10 slider score |
+
+Weights are adjustable in Settings — change them to prioritize what matters most to you.
 
 ### Settings
 
 - **Budget range** — set your min and max monthly rent to calibrate how rent is scored
+- **Scoring weights** — set the percentage weight for each scoring factor (Rent, Amenities, Gut Feeling). The three values must add up to 100%. The Rankings page always reflects your current weights.
 - **Amenities** — add or remove items from the checklist; changes take effect everywhere immediately
