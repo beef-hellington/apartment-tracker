@@ -670,6 +670,14 @@ h2 {
   gap: 8px;
 }
 
+.weights-total {
+  margin-top: 10px;
+  font-size: 13px;
+  font-weight: 500;
+}
+.weights-valid   { color: var(--success); }
+.weights-invalid { color: var(--danger); }
+
 /* ── Responsive ──────────────────────────────────────────────────────────── */
 
 @media (max-width: 640px) {

@@ -16,6 +16,7 @@ const DEFAULT_SETTINGS = {
   budgetMin: 1100,
   budgetMax: 1300,
   amenities: DEFAULT_AMENITIES,
+  weights: { rent: 40, amenities: 30, gut: 30 },
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -74,7 +75,12 @@ function parsePastedText(amenities) {
 }
 
 function scoreListings(listings, settings) {
-  const { budgetMin, budgetMax, amenities } = settings
+  const { budgetMin, budgetMax, amenities, weights } = settings
+  const w = {
+    rent:      (weights?.rent      ?? 40) / 100,
+    amenities: (weights?.amenities ?? 30) / 100,
+    gut:       (weights?.gut       ?? 30) / 100,
+  }
   return listings.map(l => {
     const rent         = parseFloat(l.rent) || 0
     const rentScore    = rent <= budgetMin ? 10 : rent >= budgetMax ? 0 : 10 * (budgetMax - rent) / (budgetMax - budgetMin)
@@ -83,7 +89,7 @@ function scoreListings(listings, settings) {
       ? (amenities.filter(a => listed[a.key]).length / amenities.length) * 10
       : 0
     const gutScore     = l.gutFeeling != null ? Number(l.gutFeeling) : 5
-    const total        = rentScore * 0.4 + amenityScore * 0.3 + gutScore * 0.3
+    const total        = rentScore * w.rent + amenityScore * w.amenities + gutScore * w.gut
     return { ...l, rentScore, amenityScore, gutScore, total }
   }).sort((a, b) => b.total - a.total)
 }
@@ -448,7 +454,8 @@ function Sbar({ label, score, color }) {
 
 function RankedView({ listings, settings }) {
   const scored = scoreListings(listings, settings)
-  const { budgetMin, budgetMax } = settings
+  const { budgetMin, budgetMax, weights } = settings
+  const w = weights ?? DEFAULT_SETTINGS.weights
 
   if (listings.length === 0) {
     return (
@@ -467,7 +474,7 @@ function RankedView({ listings, settings }) {
       <div className="view-header">
         <h2>Rankings</h2>
         <span className="hint">
-          Rent 40% · Amenities 30% · Gut feeling 30% · Budget ${budgetMin.toLocaleString()}–${budgetMax.toLocaleString()}/mo
+          Rent {w.rent}% · Amenities {w.amenities}% · Gut feeling {w.gut}% · Budget ${budgetMin.toLocaleString()}–${budgetMax.toLocaleString()}/mo
         </span>
       </div>
       <ol className="ranked-list">
@@ -503,8 +510,12 @@ function SettingsView({ settings, onSave }) {
   const [budgetMin, setBudgetMin] = useState(settings.budgetMin)
   const [budgetMax, setBudgetMax] = useState(settings.budgetMax)
   const [amenities, setAmenities] = useState(settings.amenities)
+  const [weights, setWeights]     = useState(settings.weights ?? DEFAULT_SETTINGS.weights)
   const [newLabel, setNewLabel]   = useState('')
   const [saved, setSaved]         = useState(false)
+
+  const weightTotal = Number(weights.rent) + Number(weights.amenities) + Number(weights.gut)
+  const weightsValid = weightTotal === 100
 
   function handleAddAmenity() {
     const label = newLabel.trim()
@@ -525,7 +536,8 @@ function SettingsView({ settings, onSave }) {
     const max = Number(budgetMax)
     if (!min || !max || min >= max) { alert('Budget min must be a number less than max.'); return }
     if (amenities.length === 0) { alert('Add at least one amenity.'); return }
-    onSave({ budgetMin: min, budgetMax: max, amenities })
+    if (!weightsValid) { alert('Scoring weights must add up to 100%.'); return }
+    onSave({ budgetMin: min, budgetMax: max, amenities, weights: { rent: Number(weights.rent), amenities: Number(weights.amenities), gut: Number(weights.gut) } })
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
@@ -563,6 +575,34 @@ function SettingsView({ settings, onSave }) {
               />
             </div>
           </div>
+        </div>
+
+        {/* Scoring weights */}
+        <div className="settings-section">
+          <div className="settings-section-title">Scoring Weights</div>
+          <p className="hint" style={{ marginBottom: 12 }}>
+            How much each factor counts toward the total score. Must add up to 100%.
+          </p>
+          <div className="form-row">
+            <div className="field">
+              <span>Rent (%)</span>
+              <input type="number" min="0" max="100" step="1" value={weights.rent}
+                onChange={e => setWeights(w => ({ ...w, rent: e.target.value }))} />
+            </div>
+            <div className="field">
+              <span>Amenities (%)</span>
+              <input type="number" min="0" max="100" step="1" value={weights.amenities}
+                onChange={e => setWeights(w => ({ ...w, amenities: e.target.value }))} />
+            </div>
+            <div className="field">
+              <span>Gut Feeling (%)</span>
+              <input type="number" min="0" max="100" step="1" value={weights.gut}
+                onChange={e => setWeights(w => ({ ...w, gut: e.target.value }))} />
+            </div>
+          </div>
+          <p className={`weights-total ${weightsValid ? 'weights-valid' : 'weights-invalid'}`}>
+            Total: {weightTotal}% {weightsValid ? '✓' : `— needs to be 100% (${weightTotal < 100 ? `${100 - weightTotal} short` : `${weightTotal - 100} over`})`}
+          </p>
         </div>
 
         {/* Amenities */}
@@ -632,6 +672,7 @@ export default function App() {
         amenities: Array.isArray(saved.amenities) && saved.amenities.length > 0
           ? saved.amenities
           : DEFAULT_SETTINGS.amenities,
+        weights: saved.weights ?? DEFAULT_SETTINGS.weights,
       }
     }
     catch { return { ...DEFAULT_SETTINGS } }
